@@ -49,7 +49,7 @@ app.get("/", async (req, res) => {        // Cria endpoint na rota da raiz do pr
   }
   console.log("Rota GET / solicitada");
   res.json({
-		message: "API para teste",      // Substitua pelo conteúdo da sua API
+    message: "API para teste",      // Substitua pelo conteúdo da sua API
     author: "Kailene Rodrigues de Souza",    // Substitua pelo seu nome
     statusBD: dbStatus   // Acrescente esta linha
   });
