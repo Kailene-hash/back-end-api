@@ -181,6 +181,141 @@ app.put("/questoes/:id", async (req, res) => {
   }
 });
 
+//Projetos
+// GET /projetos → retorna todos os projetos
+
+app.get("/projetos", async (req, res) => {
+  try {
+    const db = conectarBD();
+    const resultado = await db.query("SELECT * FROM projetos ORDER BY id_projeto ASC");
+    res.json(resultado.rows);
+  } catch (e) {
+    console.error("Erro ao buscar projetos:", e);
+    res.status(500).json({ erro: "Erro interno ao buscar projetos" });
+  }
+});
+
+// GET /projetos/:id → retorna um projeto específico
+app.get("/projetos/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const db = conectarBD();
+    const resultado = await db.query("SELECT * FROM projetos WHERE id_projeto = $1", [id]);
+    if (resultado.rows.length === 0) {
+      return res.status(404).json({ mensagem: "Projeto não encontrado" });
+    }
+    res.json(resultado.rows[0]);
+  } catch (e) {
+    console.error("Erro ao buscar projeto:", e);
+    res.status(500).json({ erro: "Erro interno ao buscar projeto" });
+  }
+});
+
+// POST /projetos → cria um novo projeto
+app.post("/projetos", async (req, res) => {
+  try {
+    const {
+      nome,
+      descricao,
+      cliente_nome,
+      cliente_email,
+      data_inicio,
+      data_entrega,
+      status,
+      servicos_contratados,
+      valor_total,
+    } = req.body;
+
+    if (!nome) {
+      return res.status(400).json({ erro: "Dados inválidos", mensagem: "O campo nome é obrigatório." });
+    }
+
+    const db = conectarBD();
+    const consulta = `
+      INSERT INTO projetos
+      (nome, descricao, cliente_nome, cliente_email, data_inicio, data_entrega, status, servicos_contratados, valor_total)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      RETURNING *;
+    `;
+    const valores = [nome, descricao, cliente_nome, cliente_email, data_inicio, data_entrega, status, servicos_contratados, valor_total];
+    const resultado = await db.query(consulta, valores);
+
+    res.status(201).json({ mensagem: "Projeto criado com sucesso!", projeto: resultado.rows[0] });
+  } catch (e) {
+    console.error("Erro ao criar projeto:", e);
+    res.status(500).json({ erro: "Erro interno ao criar projeto" });
+  }
+});
+
+// PUT /projetos/:id → atualiza um projeto existente
+app.put("/projetos/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const {
+      nome,
+      descricao,
+      cliente_nome,
+      cliente_email,
+      data_inicio,
+      data_entrega,
+      status,
+      servicos_contratados,
+      valor_total,
+    } = req.body;
+
+    const db = conectarBD();
+    const existente = await db.query("SELECT * FROM projetos WHERE id_projeto = $1", [id]);
+    if (existente.rows.length === 0) {
+      return res.status(404).json({ mensagem: "Projeto não encontrado" });
+    }
+
+    const atual = existente.rows[0];
+
+    const consulta = `
+      UPDATE projetos
+      SET nome = $1, descricao = $2, cliente_nome = $3, cliente_email = $4,
+          data_inicio = $5, data_entrega = $6, status = $7, servicos_contratados = $8, valor_total = $9
+      WHERE id_projeto = $10
+      RETURNING *;
+    `;
+    const valores = [
+      nome || atual.nome,
+      descricao || atual.descricao,
+      cliente_nome || atual.cliente_nome,
+      cliente_email || atual.cliente_email,
+      data_inicio || atual.data_inicio,
+      data_entrega || atual.data_entrega,
+      status || atual.status,
+      servicos_contratados || atual.servicos_contratados,
+      valor_total || atual.valor_total,
+      id
+    ];
+
+    const resultado = await db.query(consulta, valores);
+    res.json({ mensagem: "Projeto atualizado com sucesso!", projeto: resultado.rows[0] });
+  } catch (e) {
+    console.error("Erro ao atualizar projeto:", e);
+    res.status(500).json({ erro: "Erro interno ao atualizar projeto" });
+  }
+});
+
+// DELETE /projetos/:id → exclui um projeto
+app.delete("/projetos/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const db = conectarBD();
+    const resultado = await db.query("DELETE FROM projetos WHERE id_projeto = $1 RETURNING *;", [id]);
+
+    if (resultado.rows.length === 0) {
+      return res.status(404).json({ mensagem: "Projeto não encontrado" });
+    }
+
+    res.json({ mensagem: "Projeto excluído com sucesso!" });
+  } catch (e) {
+    console.error("Erro ao excluir projeto:", e);
+    res.status(500).json({ erro: "Erro interno ao excluir projeto" });
+  }
+});
 
 app.listen(port, () => {            // Um socket para "escutar" as requisições
   console.log(`Serviço rodando na porta:  ${port}`);
